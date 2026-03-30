@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulacion SC-405 — Catalina Valverde</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollToPlugin.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:auto;overflow-x:hidden;}
+body{font-family:'Inter',sans-serif;background:#000;color:#fff;overflow-x:hidden;-webkit-font-smoothing:antialiased;}
+
+/* ========== LOADER ========== */
+.loader{position:fixed;inset:0;z-index:100000;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.loader-text{font-family:'Orbitron',sans-serif;font-size:clamp(2rem,5vw,4rem);font-weight:900;letter-spacing:0.3em;overflow:hidden;}
+.loader-text span{display:inline-block;transform:translateY(100%);opacity:0;}
+.loader-bar{width:240px;height:3px;background:rgba(255,255,255,0.08);margin-top:36px;border-radius:3px;overflow:hidden;}
+.loader-fill{height:100%;width:0%;background:linear-gradient(90deg,#ff006e,#8338ec,#3a86ff,#00f5d4);border-radius:3px;}
+
+/* ========== CUSTOM CURSOR ========== */
+.cursor-dot{position:fixed;width:8px;height:8px;background:#fff;border-radius:50%;pointer-events:none;z-index:99999;mix-blend-mode:difference;}
+.cursor-ring{position:fixed;width:44px;height:44px;border:2px solid rgba(255,255,255,0.4);border-radius:50%;pointer-events:none;z-index:99998;mix-blend-mode:difference;}
+
+/* ========== PROGRESS ========== */
+.progress-line{position:fixed;top:0;left:0;height:4px;z-index:10001;width:0%;background:linear-gradient(90deg,#ff006e,#8338ec,#3a86ff,#00f5d4,#f77f00,#06d6a0);background-size:300% 100%;animation:gradShift 6s ease infinite;transition:width 0.6s cubic-bezier(0.19,1,0.22,1);}
+@keyframes gradShift{0%{background-position:0% 50%;}50%{background-position:100% 50%;}100%{background-position:0% 50%;}}
+
+/* ========== NAV ========== */
+.nav-dots{position:fixed;right:28px;top:50%;transform:translateY(-50%);z-index:10000;display:flex;flex-direction:column;gap:18px;}
+.nav-dot{width:12px;height:12px;border-radius:50%;background:rgba(255,255,255,0.15);cursor:pointer;transition:all 0.5s cubic-bezier(0.19,1,0.22,1);border:2px solid transparent;position:relative;}
+.nav-dot.active{background:transparent;border-color:#fff;box-shadow:0 0 20px var(--dot-color,#fff);transform:scale(1.5);}
+.nav-dot::after{content:attr(data-label);position:absolute;right:26px;top:50%;transform:translateY(-50%);font-family:'Space Grotesk',monospace;font-size:0.7rem;letter-spacing:0.1em;white-space:nowrap;opacity:0;transition:opacity 0.3s;color:rgba(255,255,255,0.7);}
+.nav-dot:hover::after{opacity:1;}
+.nav-dot:hover{background:rgba(255,255,255,0.4);transform:scale(1.3);}
+.slide-counter{position:fixed;bottom:28px;right:32px;z-index:10000;font-family:'Orbitron',sans-serif;font-size:0.75rem;color:rgba(255,255,255,0.25);letter-spacing:0.15em;}
+
+/* ========== GRAIN ========== */
+.grain{position:fixed;inset:0;z-index:9999;pointer-events:none;opacity:0.03;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");background-size:256px;}
+
+/* ========== SLIDES ========== */
+.slide{min-height:100vh;width:100%;position:relative;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:80px 80px;overflow:hidden;}
+
+/* ========== SLIDE BACKGROUNDS — VIVID ========== */
+#slide-0{background:#0a0a12;}
+#slide-1{background:#070e14;}
+#slide-2{background:#0d0a05;}
+#slide-3{background:#08051a;}
+#slide-4{background:#12060a;}
+#slide-5{background:#050e0a;}
+#slide-6{background:#0d080a;}
+#slide-7{background:#080512;}
+
+/* ========== GIF BACKGROUNDS PER SLIDE ========== */
+.slide-bg-gif{position:absolute;inset:0;z-index:0;overflow:hidden;}
+.slide-bg-gif img{width:100%;height:100%;object-fit:cover;opacity:0.22;filter:saturate(1.4) brightness(1.1);}
+.slide-bg-gif .bg-overlay{position:absolute;inset:0;z-index:1;}
+
+/* ========== HERO ========== */
+.hero-container{position:relative;z-index:2;width:100%;text-align:center;}
+.hero-label{font-family:'Space Grotesk',monospace;font-size:clamp(0.85rem,1.2vw,1.05rem);letter-spacing:0.35em;text-transform:uppercase;color:#bbb;margin-bottom:28px;}
+.hero-title{font-family:'Orbitron',sans-serif;font-weight:900;font-size:clamp(4.5rem,13vw,12rem);line-height:0.9;letter-spacing:-0.03em;text-transform:uppercase;}
+.hero-title .line{display:block;overflow:hidden;}
+.hero-title .line .word{display:inline-block;}
+.hero-sub{font-size:clamp(1.2rem,2.2vw,1.55rem);color:#ddd;font-weight:400;line-height:1.7;max-width:700px;margin:32px auto 0;}
+.hero-line-accent{height:3px;width:140px;margin:36px auto;border-radius:3px;}
+
+/* ========== GIF FRAMES ========== */
+.gif-frame{position:relative;overflow:hidden;border-radius:20px;box-shadow:0 20px 80px rgba(0,0,0,0.5);}
+.gif-frame img{width:100%;height:100%;object-fit:cover;display:block;}
+.gif-frame::after{content:'';position:absolute;inset:0;border:1px solid rgba(255,255,255,0.1);border-radius:20px;pointer-events:none;}
+.gif-glow{position:absolute;inset:-2px;border-radius:22px;opacity:0;transition:opacity 0.6s ease;z-index:-1;}
+.gif-frame:hover .gif-glow{opacity:1;}
+
+/* ========== IMAGE REVEAL ========== */
+.img-reveal{position:relative;overflow:hidden;border-radius:20px;box-shadow:0 20px 80px rgba(0,0,0,0.4);}
+.img-reveal img,.img-reveal video{width:100%;height:100%;object-fit:cover;display:block;transform:scale(1.15);transition:transform 1.2s cubic-bezier(0.19,1,0.22,1);}
+.img-reveal.revealed img,.img-reveal.revealed video{transform:scale(1);}
+.img-reveal::before{content:'';position:absolute;inset:0;z-index:2;background:var(--reveal-color,#ff006e);transform-origin:left;transform:scaleX(1);transition:transform 1s cubic-bezier(0.77,0,0.175,1) 0.2s;}
+.img-reveal.revealed::before{transform:scaleX(0);transform-origin:right;}
+.img-reveal::after{content:'';position:absolute;inset:0;border:1px solid rgba(255,255,255,0.08);border-radius:20px;z-index:3;pointer-events:none;}
+
+/* ========== FLOATING GIFS ========== */
+.float-gif{position:absolute;border-radius:16px;overflow:hidden;box-shadow:0 15px 50px rgba(0,0,0,0.5);border:1px solid rgba(255,255,255,0.08);}
+.float-gif img{width:100%;height:100%;object-fit:cover;}
+
+/* ========== GLASS ========== */
+.glass{background:rgba(255,255,255,0.08);backdrop-filter:blur(30px) brightness(1.1);-webkit-backdrop-filter:blur(30px) brightness(1.1);border:1px solid rgba(255,255,255,0.14);border-radius:24px;padding:40px;transition:all 0.6s cubic-bezier(0.19,1,0.22,1);}
+.glass:hover{border-color:rgba(255,255,255,0.25);transform:translateY(-6px);background:rgba(255,255,255,0.12);}
+
+/* ========== SECTION ========== */
+.section-label{font-family:'Space Grotesk',monospace;font-size:clamp(0.75rem,1vw,0.9rem);letter-spacing:0.3em;text-transform:uppercase;margin-bottom:18px;display:inline-block;padding:10px 24px;border-radius:100px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.04);}
+.section-title{font-family:'Syne',sans-serif;font-weight:800;font-size:clamp(3.2rem,7vw,5.5rem);line-height:1.0;letter-spacing:-0.02em;}
+.section-sub{font-size:clamp(1.15rem,1.8vw,1.35rem);color:#ddd;font-weight:400;line-height:1.8;max-width:600px;margin-top:22px;}
+
+/* ========== TWO COL ========== */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:80px;width:100%;max-width:1350px;align-items:center;}
+
+/* ========== TIMELINE ========== */
+.timeline-v2{position:relative;max-width:700px;width:100%;padding-left:60px;margin-top:36px;}
+.timeline-v2::before{content:'';position:absolute;left:20px;top:0;bottom:0;width:2px;background:linear-gradient(to bottom,transparent,var(--tl-c1),var(--tl-c2),transparent);}
+.tl2-item{position:relative;margin-bottom:44px;opacity:0;transform:translateX(40px);}
+.tl2-dot{position:absolute;left:-48px;top:6px;width:16px;height:16px;border-radius:50%;border:2px solid var(--dot-c);background:transparent;transition:all 0.5s ease;}
+.tl2-item.active .tl2-dot{background:var(--dot-c);box-shadow:0 0 25px var(--dot-c);}
+.tl2-item h4{font-family:'Syne',sans-serif;font-size:clamp(1.15rem,1.6vw,1.4rem);font-weight:700;margin-bottom:8px;}
+.tl2-item p{font-size:clamp(1rem,1.15vw,1.1rem);color:#ddd;line-height:1.7;}
+.tl2-tag{display:inline-block;font-family:'Space Grotesk',monospace;font-size:0.7rem;letter-spacing:0.15em;padding:5px 14px;border-radius:100px;margin-bottom:10px;border:1px solid rgba(255,255,255,0.12);}
+
+/* ========== STAT BLOCKS ========== */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:28px;width:100%;max-width:1300px;}
+.stat-block{text-align:center;padding:44px 24px;border-radius:24px;position:relative;overflow:hidden;}
+.stat-num{font-family:'Orbitron',sans-serif;font-weight:900;font-size:clamp(5rem,12vw,8rem);line-height:1;letter-spacing:-0.04em;}
+.stat-label{font-family:'Space Grotesk',monospace;font-size:0.95rem;color:#ccc;letter-spacing:0.15em;margin-top:14px;text-transform:uppercase;}
+
+/* ========== TC CARDS ========== */
+.tc-grid-v2{display:grid;grid-template-columns:repeat(3,1fr);gap:28px;width:100%;max-width:1350px;}
+.tc-card-v2{border-radius:24px;padding:40px;position:relative;overflow:hidden;border:1px solid rgba(255,255,255,0.12);background:rgba(0,0,0,0.7);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);transition:all 0.6s cubic-bezier(0.19,1,0.22,1);cursor:default;}
+.tc-card-v2:hover{transform:translateY(-10px) scale(1.02);border-color:var(--tc-c);box-shadow:0 30px 80px rgba(0,0,0,0.4),0 0 50px color-mix(in srgb,var(--tc-c) 20%,transparent);}
+.tc-card-v2::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:var(--tc-c);transform:scaleX(0);transform-origin:left;transition:transform 0.6s cubic-bezier(0.19,1,0.22,1);}
+.tc-card-v2:hover::before{transform:scaleX(1);}
+.tc-card-v2 .tc-icon{width:56px;height:56px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-family:'Orbitron',sans-serif;font-weight:900;margin-bottom:22px;border:1px solid rgba(255,255,255,0.1);}
+.tc-card-v2 .tc-id{font-family:'Orbitron',sans-serif;font-size:0.75rem;letter-spacing:0.25em;color:var(--tc-c);margin-bottom:14px;font-weight:700;}
+.tc-card-v2 h3{font-family:'Syne',sans-serif;font-size:clamp(1.3rem,1.7vw,1.5rem);font-weight:700;margin-bottom:14px;line-height:1.25;color:#fff;}
+.tc-card-v2 p{font-size:clamp(1rem,1.15vw,1.1rem);color:#ddd;line-height:1.7;}
+.tc-card-v2 .tc-meta{display:flex;gap:18px;margin-top:22px;font-size:0.9rem;color:#bbb;font-family:'Space Grotesk',monospace;}
+.tc-card-v2 .tc-bar{height:3px;border-radius:10px;margin-top:22px;background:rgba(255,255,255,0.08);overflow:hidden;}
+.tc-card-v2 .tc-bar-fill{height:100%;width:0%;border-radius:10px;transition:width 2s cubic-bezier(0.19,1,0.22,1);}
+
+/* ========== CHALLENGES ========== */
+.challenges-grid{display:grid;gap:22px;margin-top:36px;}
+.challenge-v2{padding:30px 34px;border-radius:20px;background:rgba(0,0,0,0.65);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.12);transition:all 0.5s ease;display:grid;grid-template-columns:auto 1fr;gap:22px;align-items:start;}
+.challenge-v2:hover{border-color:var(--ch-c);transform:translateX(8px);background:rgba(0,0,0,0.6);box-shadow:0 10px 40px rgba(0,0,0,0.3),0 0 25px color-mix(in srgb,var(--ch-c) 18%,transparent);}
+.challenge-v2 .ch-num{font-family:'Orbitron',sans-serif;font-size:0.7rem;letter-spacing:0.2em;padding:8px 14px;border-radius:10px;border:1px solid var(--ch-c);color:var(--ch-c);font-weight:700;}
+.challenge-v2 h4{font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:700;margin-bottom:10px;}
+.challenge-v2 p{font-size:1.05rem;color:#ddd;line-height:1.7;}
+.challenge-v2 code{color:var(--ch-c);font-size:0.9rem;background:rgba(255,255,255,0.06);padding:3px 12px;border-radius:8px;font-family:'Space Grotesk',monospace;}
+
+/* ========== PILLS ========== */
+.pills-v2{display:flex;flex-wrap:wrap;gap:14px;margin-top:28px;}
+.pill-v2{padding:12px 26px;border-radius:100px;border:1px solid rgba(255,255,255,0.18);font-size:0.95rem;color:#ccc;background:rgba(255,255,255,0.06);font-family:'Space Grotesk',monospace;letter-spacing:0.06em;transition:all 0.4s ease;cursor:default;}
+.pill-v2:hover{border-color:var(--pill-c);color:var(--pill-c);background:color-mix(in srgb,var(--pill-c) 10%,transparent);box-shadow:0 0 35px color-mix(in srgb,var(--pill-c) 25%,transparent);transform:translateY(-3px);}
+
+/* ========== MARQUEE ========== */
+.marquee-wrap{width:100vw;overflow:hidden;padding:24px 0;}
+.marquee-track{display:flex;width:max-content;animation:marquee var(--speed,30s) linear infinite;}
+@keyframes marquee{0%{transform:translateX(0);}100%{transform:translateX(-50%);}}
+.marquee-item{font-family:'Orbitron',sans-serif;font-size:clamp(2rem,5vw,3.5rem);font-weight:900;letter-spacing:0.05em;white-space:nowrap;padding:0 50px;opacity:0.1;text-transform:uppercase;}
+.marquee-item.hl{opacity:0.35;}
+
+/* ========== CLOSING ========== */
+.closing-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:22px;margin-top:52px;max-width:1100px;}
+.closing-card{padding:32px;border-radius:22px;text-align:center;border:1px solid rgba(255,255,255,0.12);background:rgba(0,0,0,0.45);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);transition:all 0.5s ease;overflow:hidden;}
+.closing-card:hover{transform:translateY(-8px) scale(1.03);border-color:var(--cc-c);box-shadow:0 20px 60px rgba(0,0,0,0.3),0 0 40px color-mix(in srgb,var(--cc-c) 18%,transparent);}
+.closing-card .cc-label{font-family:'Space Grotesk',monospace;font-size:0.75rem;letter-spacing:0.2em;color:#aaa;margin-bottom:10px;}
+.closing-card .cc-value{font-family:'Syne',sans-serif;font-weight:700;font-size:1.25rem;}
+
+/* ========== MINI METRICS ========== */
+.mini-metrics{display:flex;gap:18px;margin-top:36px;flex-wrap:wrap;}
+.mini-metric{padding:20px 28px;border-radius:18px;border:1px solid rgba(255,255,255,0.12);background:rgba(0,0,0,0.4);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);text-align:center;}
+.mini-metric .mm-val{font-family:'Orbitron',sans-serif;font-size:1.6rem;font-weight:900;}
+.mini-metric .mm-lab{font-size:0.8rem;color:#bbb;font-family:'Space Grotesk',monospace;letter-spacing:0.1em;margin-top:6px;}
+
+/* ========== PARTICLE CANVAS ========== */
+#particleCanvas{position:fixed;inset:0;z-index:0;pointer-events:none;}
+
+/* ========== FORCE TEXT VISIBILITY SLIDES 4-7 ========== */
+#slide-3 .stat-label,
+#slide-3 .mm-lab,
+#slide-4 .tc-card-v2 p,
+#slide-4 .tc-card-v2 h3,
+#slide-4 .tc-card-v2 .tc-meta,
+#slide-4 .tc-card-v2 .tc-id,
+#slide-5 .tc-card-v2 p,
+#slide-5 .tc-card-v2 h3,
+#slide-5 .tc-card-v2 .tc-meta,
+#slide-5 .tc-card-v2 .tc-id,
+#slide-6 .challenge-v2 h4,
+#slide-6 .challenge-v2 p,
+#slide-6 .challenge-v2 code{
+  color:#fff!important;
+  opacity:1!important;
+  text-shadow:0 1px 8px rgba(0,0,0,0.7);
+}
+#slide-3 .stat-num,
+#slide-3 .mm-val{
+  text-shadow:0 0 30px currentColor;
+}
+#slide-4 .tc-card-v2,
+#slide-5 .tc-card-v2{
+  background:rgba(0,0,0,0.8)!important;
+}
+#slide-6 .challenge-v2{
+  background:rgba(0,0,0,0.75)!important;
+}
+
+/* ========== RESPONSIVE ========== */
+@media(max-width:1024px){
+  .slide{padding:60px 36px;}
+  .two-col{grid-template-columns:1fr;gap:40px;}
+  .tc-grid-v2{grid-template-columns:1fr;}
+  .stat-grid{grid-template-columns:repeat(2,1fr);gap:16px;}
+  .closing-grid{grid-template-columns:repeat(2,1fr);}
+  .float-gif{display:none!important;}
+}
+@media(max-width:640px){
+  .slide{padding:40px 20px;}
+  .stat-grid{grid-template-columns:1fr 1fr;}
+  .hero-title{font-size:clamp(3rem,16vw,5.5rem)!important;}
+  .nav-dots{right:12px;gap:12px;}
+  .nav-dot{width:8px;height:8px;}
+  .closing-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div class="loader" id="loader">
+  <div class="loader-text" id="loaderText"><span>S</span><span>I</span><span>M</span><span>U</span><span>L</span><span>A</span><span>C</span><span>I</span><span>O</span><span>N</span></div>
+  <div class="loader-bar"><div class="loader-fill" id="loaderFill"></div></div>
+</div>
+
+<!-- CURSOR -->
+<div class="cursor-dot" id="cursorDot"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- FIXED -->
+<div class="grain"></div>
+<canvas id="particleCanvas"></canvas>
+<div class="progress-line" id="progressLine"></div>
+<div class="nav-dots" id="navDots"></div>
+<div class="slide-counter" id="slideCounter">01 / 08</div>
+
+<!-- ======================= SLIDE 1: HERO ======================= -->
+<section class="slide" id="slide-0">
+  <!-- Background GIF -->
+  <div class="slide-bg-gif">
+    <img src="https://media.giphy.com/media/26tn33aiTi1jkl6H6/giphy.gif" alt="">
+    <div class="bg-overlay" style="background:radial-gradient(ellipse at 30% 40%,rgba(255,0,110,0.18),transparent 60%),radial-gradient(ellipse at 70% 60%,rgba(131,56,236,0.15),transparent 55%),rgba(10,10,18,0.6);"></div>
+  </div>
+
+  <div class="hero-container">
+    <div class="hero-label" id="heroLabel">SC-405 &middot; Calidad del Software &middot; Universidad Fidelitas &middot; Prof. Daniel Grossberger</div>
+    <h1 class="hero-title" id="heroTitle">
+      <span class="line"><span class="word" style="color:rgba(255,255,255,0.2);-webkit-text-stroke:2px rgba(255,255,255,0.25);">Simulacion</span></span>
+      <span class="line"><span class="word" style="background:linear-gradient(135deg,#ff006e,#8338ec,#3a86ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Automation</span></span>
+      <span class="line"><span class="word" style="background:linear-gradient(135deg,#8338ec,#ff006e);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Exercise</span></span>
+    </h1>
+    <div class="hero-line-accent" style="background:linear-gradient(90deg,#ff006e,#8338ec,#3a86ff);"></div>
+    <p class="hero-sub" id="heroSub">Automatizacion de pruebas end-to-end con Selenium WebDriver, TestNG y Page Object Model</p>
+    <div class="pills-v2" style="justify-content:center;margin-top:40px;" id="heroPills">
+      <span class="pill-v2" style="--pill-c:#ff006e;">Selenium 4.19</span>
+      <span class="pill-v2" style="--pill-c:#8338ec;">TestNG 7.9</span>
+      <span class="pill-v2" style="--pill-c:#3a86ff;">Java 17</span>
+      <span class="pill-v2" style="--pill-c:#ffbe0b;">Maven</span>
+      <span class="pill-v2" style="--pill-c:#06d6a0;">ExtentReports</span>
+    </div>
+    <p id="heroAuthor" style="margin-top:52px;font-size:0.95rem;color:rgba(255,255,255,0.45);font-family:'Space Grotesk',monospace;letter-spacing:0.2em;">Catalina Valverde &middot; 2026</p>
+  </div>
+
+  <!-- Floating GIFs -->
+  <div class="float-gif" style="width:200px;height:260px;top:6%;left:4%;transform:rotate(-6deg);opacity:0;z-index:1;" id="floatGif1">
+    <img src="https://media.giphy.com/media/ZVik7pBtu9dNS/giphy.gif" alt="">
+  </div>
+  <div class="float-gif" style="width:170px;height:220px;bottom:8%;right:5%;transform:rotate(5deg);opacity:0;z-index:1;" id="floatGif2">
+    <img src="https://media.giphy.com/media/qgQUggAC3Pfv687qPC/giphy.gif" alt="">
+  </div>
+  <div class="float-gif" style="width:150px;height:190px;top:12%;right:10%;transform:rotate(3deg);opacity:0;z-index:1;" id="floatGif3">
+    <img src="https://media.giphy.com/media/L1R1tvI9svkIWwpVYr/giphy.gif" alt="">
+  </div>
+</section>
+
+<!-- ======================= SLIDE 2: ABOUT ======================= -->
+<section class="slide" id="slide-1">
+  <div class="slide-bg-gif">
+    <img src="https://media.giphy.com/media/l0HlNaQ6gWfllcjDO/giphy.gif" alt="">
+    <div class="bg-overlay" style="background:radial-gradient(ellipse at 60% 30%,rgba(0,245,212,0.2),transparent 55%),radial-gradient(ellipse at 20% 70%,rgba(0,187,249,0.15),transparent 50%),rgba(7,14,20,0.6);"></div>
+  </div>
+
+  <div class="two-col" style="z-index:2;">
+    <div>
+      <span class="section-label" style="color:#00f5d4;border-color:rgba(0,245,212,0.25);">Contexto del Proyecto</span>
+      <h2 class="section-title" style="margin-top:20px;">
+        Que es<br><span style="color:#00f5d4;">Automation</span><br><span style="color:#00bbf9;">Exercise?</span>
+      </h2>
+      <p class="section-sub">Plataforma e-commerce disenada para practicar automatizacion. Flujos completos de registro, login, catalogo, carrito, formularios y reviews.</p>
+      <div class="pills-v2" style="margin-top:28px;">
+        <span class="pill-v2" style="--pill-c:#00f5d4;">data-qa attributes</span>
+        <span class="pill-v2" style="--pill-c:#00bbf9;">Sin SSL issues</span>
+        <span class="pill-v2" style="--pill-c:#9b5de5;">Flujos completos</span>
+      </div>
+    </div>
+    <div class="gif-frame" style="height:420px;">
+      <img src="https://media.giphy.com/media/RbDKaczqWovIugyJmW/giphy.gif" alt="E-commerce testing">
+      <div class="gif-glow" style="box-shadow:0 0 60px rgba(0,245,212,0.3);"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= SLIDE 3: ARCHITECTURE ======================= -->
+<section class="slide" id="slide-2">
+  <div class="slide-bg-gif">
+    <img src="https://media.giphy.com/media/3oKIPEqDGUULpEU0aQ/giphy.gif" alt="">
+    <div class="bg-overlay" style="background:radial-gradient(ellipse at 40% 40%,rgba(247,127,0,0.2),transparent 55%),radial-gradient(ellipse at 80% 70%,rgba(252,191,73,0.15),transparent 50%),rgba(13,10,5,0.6);"></div>
+  </div>
+
+  <div class="two-col" style="z-index:2;">
+    <div class="gif-frame" style="height:460px;">
+      <img src="https://media.giphy.com/media/juua9i2c2fA0AIp2iq/giphy.gif" alt="Code architecture">
+      <div class="gif-glow" style="box-shadow:0 0 60px rgba(247,127,0,0.3);"></div>
+    </div>
+    <div>
+      <span class="section-label" style="color:#f77f00;border-color:rgba(247,127,0,0.25);">Arquitectura</span>
+      <h2 class="section-title" style="margin-top:20px;">
+        Patron<br><span style="color:#f77f00;">Page Object</span><br><span style="color:#fcbf49;">Model</span>
+      </h2>
+      <div class="timeline-v2" style="--tl-c1:#f77f00;--tl-c2:#fcbf49;">
+        <div class="tl2-item" style="--dot-c:#f77f00;">
+          <div class="tl2-dot"></div>
+          <div class="tl2-tag" style="color:#f77f00;border-color:rgba(247,127,0,0.3);">BASE</div>
+          <h4 style="color:#fb923c;">base/ — BaseTest.java</h4>
+          <p>Setup y teardown de ChromeDriver. Deteccion automatica de SO. Captura de screenshots en fallo.</p>
+        </div>
+        <div class="tl2-item" style="--dot-c:#fcbf49;">
+          <div class="tl2-dot"></div>
+          <div class="tl2-tag" style="color:#fcbf49;border-color:rgba(252,191,73,0.3);">PAGES</div>
+          <h4 style="color:#fcbf49;">pages/ — BasePage + 8 Page Objects</h4>
+          <p>Clase abstracta con helpers. Cada pagina encapsula selectores con @FindBy y PageFactory.</p>
+        </div>
+        <div class="tl2-item" style="--dot-c:#f77f00;">
+          <div class="tl2-dot"></div>
+          <div class="tl2-tag" style="color:#f77f00;border-color:rgba(247,127,0,0.3);">TESTS</div>
+          <h4 style="color:#fb923c;">test/ — 6 Test Classes</h4>
+          <p>Cada clase TestNG con multiples validaciones y reporte con ExtentReports.</p>
+        </div>
+        <div class="tl2-item" style="--dot-c:#fcbf49;">
+          <div class="tl2-dot"></div>
+          <div class="tl2-tag" style="color:#fcbf49;border-color:rgba(252,191,73,0.3);">UTILS</div>
+          <h4 style="color:#fcbf49;">utils/ — ExtentManager.java</h4>
+          <p>Patron ThreadLocal para reportes HTML con categorias y autor.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= SLIDE 4: STATS ======================= -->
+<section class="slide" id="slide-3">
+  <div class="slide-bg-gif">
+    <img src="https://media.giphy.com/media/3o7aD2saalBwwftBIY/giphy.gif" alt="">
+    <div class="bg-overlay" style="background:radial-gradient(ellipse at 50% 30%,rgba(114,9,183,0.22),transparent 50%),radial-gradient(ellipse at 30% 70%,rgba(76,201,240,0.15),transparent 50%),rgba(8,5,26,0.55);"></div>
+  </div>
+
+  <div style="z-index:2;width:100%;max-width:1350px;text-align:center;">
+    <span class="section-label" style="color:#c77dff;border-color:rgba(199,125,255,0.3);">Metricas del Proyecto</span>
+    <h2 class="section-title" style="margin-top:22px;margin-bottom:52px;">
+      Los <span style="color:#c77dff;">numeros</span> hablan
+    </h2>
+
+    <div class="stat-grid">
+      <div class="stat-block glass">
+        <div class="stat-num counter" data-target="6" style="color:#c77dff;text-shadow:0 0 40px rgba(199,125,255,0.5);">0</div>
+        <div class="stat-label">Test Cases</div>
+      </div>
+      <div class="stat-block glass">
+        <div class="stat-num counter" data-target="68" style="color:#ff6bd6;text-shadow:0 0 40px rgba(255,107,214,0.5);">0</div>
+        <div class="stat-label">Validaciones</div>
+      </div>
+      <div class="stat-block glass">
+        <div class="stat-num counter" data-target="26" style="color:#4cc9f0;text-shadow:0 0 40px rgba(76,201,240,0.5);">0</div>
+        <div class="stat-label">Pantallas</div>
+      </div>
+      <div class="stat-block glass">
+        <div class="stat-num counter" data-target="8" style="color:#ff5caa;text-shadow:0 0 40px rgba(255,92,170,0.5);">0</div>
+        <div class="stat-label">Page Objects</div>
+      </div>
+    </div>
+
+    <div class="mini-metrics" style="justify-content:center;margin-top:44px;">
+      <div class="mini-metric glass">
+        <div class="mm-val" style="color:#5fffb5;text-shadow:0 0 20px rgba(95,255,181,0.4);">100%</div>
+        <div class="mm-lab">Pass Rate</div>
+      </div>
+      <div class="mini-metric glass">
+        <div class="mm-val" style="color:#7dd8ff;text-shadow:0 0 20px rgba(125,216,255,0.4);">POM</div>
+        <div class="mm-lab">Design Pattern</div>
+      </div>
+      <div class="mini-metric glass">
+        <div class="mm-val" style="color:#ff6bd6;text-shadow:0 0 20px rgba(255,107,214,0.4);">Extent</div>
+        <div class="mm-lab">HTML Reports</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Marquees -->
+  <div class="marquee-wrap" style="position:absolute;bottom:40px;">
+    <div class="marquee-track" style="--speed:35s;">
+      <span class="marquee-item">SELENIUM</span><span class="marquee-item hl" style="color:#c77dff;">TESTNG</span><span class="marquee-item">JAVA 17</span><span class="marquee-item hl" style="color:#4cc9f0;">MAVEN</span><span class="marquee-item">PAGE OBJECT MODEL</span><span class="marquee-item hl" style="color:#f72585;">EXTENT REPORTS</span>
+      <span class="marquee-item">SELENIUM</span><span class="marquee-item hl" style="color:#c77dff;">TESTNG</span><span class="marquee-item">JAVA 17</span><span class="marquee-item hl" style="color:#4cc9f0;">MAVEN</span><span class="marquee-item">PAGE OBJECT MODEL</span><span class="marquee-item hl" style="color:#f72585;">EXTENT REPORTS</span>
+    </div>
+  </div>
+  <div class="marquee-wrap" style="position:absolute;bottom:0;">
+    <div class="marquee-track" style="--speed:45s;animation-direction:reverse;">
+      <span class="marquee-item">AUTOMATION</span><span class="marquee-item hl" style="color:#ff6bd6;">TESTING</span><span class="marquee-item">QUALITY</span><span class="marquee-item hl" style="color:#06d6a0;">ASSURANCE</span><span class="marquee-item">WEBDRIVER</span><span class="marquee-item hl" style="color:#fbbf24;">CHROME</span>
+      <span class="marquee-item">AUTOMATION</span><span class="marquee-item hl" style="color:#ff6bd6;">TESTING</span><span class="marquee-item">QUALITY</span><span class="marquee-item hl" style="color:#06d6a0;">ASSURANCE</span><span class="marquee-item">WEBDRIVER</span><span class="marquee-item hl" style="color:#fbbf24;">CHROME</span>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= SLIDE 5: TC01-TC03 ======================= -->
+<section class="slide" id="slide-4">
+  <div class="slide-bg-gif">
+    <img src="https://media.giphy.com/media/MC6eSuC3yypCU/giphy.gif" alt="">
+    <div class="bg-overlay" style="background:radial-gradient(ellipse at 30% 30%,rgba(255,0,110,0.18),transparent 55%),radial-gradient(ellipse at 70% 70%,rgba(251,86,7,0.15),transparent 50%),rgba(18,6,10,0.55);"></div>
+  </div>
+
+  <div style="z-index:2;width:100%;max-width:1350px;">
+    <div style="text-align:center;margin-bottom:52px;">
+      <span class="section-label" style="color:#ff006e;border-color:rgba(255,0,110,0.25);">Casos de Prueba</span>
+      <h2 class="section-title" style="margin-top:22px;">TC01 <span style="color:#ff006e;">—</span> TC03</h2>
+    </div>
+    <div class="tc-grid-v2">
+      <div class="tc-card-v2" style="--tc-c:#ff006e;">
+        <div class="tc-icon" style="background:rgba(255,0,110,0.12);color:#ff006e;">01</div>
+        <div class="tc-id">TC01</div>
+        <h3>Sign Up — Registro completo</h3>
+        <p>Flujo completo: Home > Signup > Formulario (titulo, password, DOB, direccion) > Account Created > Logged in as Caty.</p>
+        <div class="tc-meta"><span>13 validaciones</span><span>5 pantallas</span></div>
+        <div class="tc-bar"><div class="tc-bar-fill" data-width="100%" style="background:linear-gradient(90deg,#ff006e,#fb5607);"></div></div>
+      </div>
+      <div class="tc-card-v2" style="--tc-c:#fb5607;">
+        <div class="tc-icon" style="background:rgba(251,86,7,0.12);color:#fb5607;">02</div>
+        <div class="tc-id">TC02</div>
+        <h3>Login — Valido e Invalido</h3>
+        <p>Registra usuario, logout, intenta login invalido (verifica error), luego login valido. Cubre ambos escenarios.</p>
+        <div class="tc-meta"><span>10 validaciones</span><span>5 pantallas</span></div>
+        <div class="tc-bar"><div class="tc-bar-fill" data-width="100%" style="background:linear-gradient(90deg,#fb5607,#ffbe0b);"></div></div>
+      </div>
+      <div class="tc-card-v2" style="--tc-c:#ffbe0b;">
+        <div class="tc-icon" style="background:rgba(255,190,11,0.12);color:#ffbe0b;">03</div>
+        <div class="tc-id">TC03</div>
+        <h3>Search Products</h3>
+        <p>Busqueda exitosa ("top") con resultados. Luego busqueda sin resultados verificando 0 resultados.</p>
+        <div class="tc-meta"><span>11 validaciones</span><span>4 pantallas</span></div>
+        <div class="tc-bar"><div class="tc-bar-fill" data-width="100%" style="background:linear-gradient(90deg,#ffbe0b,#ff006e);"></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= SLIDE 6: TC04-TC06 ======================= -->
+<section class="slide" id="slide-5">
+  <div class="slide-bg-gif">
+    <img src="https://media.giphy.com/media/xT9IgzoKnwFNmISR8I/giphy.gif" alt="">
+    <div class="bg-overlay" style="background:radial-gradient(ellipse at 70% 30%,rgba(6,214,160,0.2),transparent 55%),radial-gradient(ellipse at 30% 70%,rgba(17,138,178,0.15),transparent 50%),rgba(5,14,10,0.55);"></div>
+  </div>
+
+  <div style="z-index:2;width:100%;max-width:1350px;">
+    <div style="text-align:center;margin-bottom:52px;">
+      <span class="section-label" style="color:#06d6a0;border-color:rgba(6,214,160,0.25);">Casos de Prueba</span>
+      <h2 class="section-title" style="margin-top:22px;">TC04 <span style="color:#ffd166;">—</span> TC06</h2>
+    </div>
+    <div class="tc-grid-v2">
+      <div class="tc-card-v2" style="--tc-c:#06d6a0;">
+        <div class="tc-icon" style="background:rgba(6,214,160,0.12);color:#06d6a0;">04</div>
+        <div class="tc-id">TC04</div>
+        <h3>Product Detail & Cart</h3>
+        <p>Detalle de producto: nombre, precio, disponibilidad, condicion, marca. Cambia cantidad, agrega al carrito y verifica.</p>
+        <div class="tc-meta"><span>12 validaciones</span><span>4 pantallas</span></div>
+        <div class="tc-bar"><div class="tc-bar-fill" data-width="100%" style="background:linear-gradient(90deg,#06d6a0,#118ab2);"></div></div>
+      </div>
+      <div class="tc-card-v2" style="--tc-c:#118ab2;">
+        <div class="tc-icon" style="background:rgba(17,138,178,0.12);color:#118ab2;">05</div>
+        <div class="tc-id">TC05</div>
+        <h3>Contact Us — Formulario</h3>
+        <p>Llena formulario de contacto, envia manejando el alert de JavaScript, verifica exito y regresa al Home.</p>
+        <div class="tc-meta"><span>11 validaciones</span><span>4 pantallas</span></div>
+        <div class="tc-bar"><div class="tc-bar-fill" data-width="100%" style="background:linear-gradient(90deg,#118ab2,#ffd166);"></div></div>
+      </div>
+      <div class="tc-card-v2" style="--tc-c:#ffd166;">
+        <div class="tc-icon" style="background:rgba(255,209,102,0.12);color:#ffd166;">06</div>
+        <div class="tc-id">TC06</div>
+        <h3>Product Review — Resena</h3>
+        <p>Navega a Products, entra al detalle, verifica "Write Your Review", envia resena y confirma exito.</p>
+        <div class="tc-meta"><span>11 validaciones</span><span>4 pantallas</span></div>
+        <div class="tc-bar"><div class="tc-bar-fill" data-width="100%" style="background:linear-gradient(90deg,#ffd166,#06d6a0);"></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= SLIDE 7: CHALLENGES ======================= -->
+<section class="slide" id="slide-6">
+  <div class="slide-bg-gif">
+    <img src="https://media.giphy.com/media/3oKIPnAiaMCws8nOsE/giphy.gif" alt="">
+    <div class="bg-overlay" style="background:radial-gradient(ellipse at 40% 40%,rgba(230,57,70,0.2),transparent 55%),radial-gradient(ellipse at 70% 60%,rgba(69,123,157,0.15),transparent 50%),rgba(13,8,10,0.55);"></div>
+  </div>
+
+  <div class="two-col" style="z-index:2;">
+    <div>
+      <span class="section-label" style="color:#e63946;border-color:rgba(230,57,70,0.25);">Retos Tecnicos</span>
+      <h2 class="section-title" style="margin-top:20px;">
+        Desafios<br><span style="color:#e63946;">y Soluciones</span>
+      </h2>
+      <div class="challenges-grid">
+        <div class="challenge-v2" style="--ch-c:#e63946;">
+          <div class="ch-num">01</div>
+          <div>
+            <h4 style="color:#e63946;">Google Vignette Ads</h4>
+            <p>Los anuncios bloquean la navegacion por clicks. Solucion: <code>driver.get(url)</code> para navegar directamente.</p>
+          </div>
+        </div>
+        <div class="challenge-v2" style="--ch-c:#457b9d;">
+          <div class="ch-num">02</div>
+          <div>
+            <h4 style="color:#70a5c4;">CSS :has() no soportado</h4>
+            <p>Pseudo-selector <code>:has()</code> no funciona en Selenium. Se usa XPath: <code>//a[contains(.,'Logged in')]</code></p>
+          </div>
+        </div>
+        <div class="challenge-v2" style="--ch-c:#a8dadc;">
+          <div class="ch-num">03</div>
+          <div>
+            <h4 style="color:#a8dadc;">Alert de JavaScript</h4>
+            <p>Contact Us dispara un alert nativo. Se maneja con <code>driver.switchTo().alert().accept()</code></p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="gif-frame" style="height:500px;">
+      <img src="https://media.giphy.com/media/KAq5w47R9rmTuvWOWa/giphy.gif" alt="Problem solving">
+      <div class="gif-glow" style="box-shadow:0 0 60px rgba(230,57,70,0.3);"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= SLIDE 8: CLOSING ======================= -->
+<section class="slide" id="slide-7">
+  <div class="slide-bg-gif">
+    <img src="https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif" alt="">
+    <div class="bg-overlay" style="background:radial-gradient(ellipse at 30% 30%,rgba(247,37,133,0.2),transparent 50%),radial-gradient(ellipse at 70% 70%,rgba(67,97,238,0.18),transparent 50%),radial-gradient(ellipse at 50% 50%,rgba(6,214,160,0.1),transparent 45%),rgba(8,5,18,0.5);"></div>
+  </div>
+
+  <div style="text-align:center;z-index:2;width:100%;">
+    <span class="section-label" style="color:#f72585;border-color:rgba(247,37,133,0.25);">Conclusion</span>
+
+    <div style="margin:36px 0 16px;">
+      <div class="stat-num counter" data-target="6" id="finalCounter" style="font-size:clamp(7rem,18vw,14rem);background:linear-gradient(135deg,#f72585,#7209b7,#4361ee,#06d6a0);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-size:300% 300%;animation:gradShift 4s ease infinite;">0</div>
+      <div style="font-family:'Space Grotesk',monospace;font-size:1.2rem;color:rgba(255,255,255,0.75);letter-spacing:0.25em;margin-top:-8px;">DE 6 TEST CASES</div>
+    </div>
+
+    <h2 id="passedText" style="opacity:0;transform:scale(0);">
+      <span style="font-family:'Orbitron',sans-serif;font-size:clamp(3.5rem,10vw,7rem);font-weight:900;letter-spacing:0.12em;background:linear-gradient(135deg,#06d6a0,#00f5d4,#4cc9f0);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">PASSED</span>
+    </h2>
+
+    <p style="margin:32px auto 0;text-align:center;max-width:650px;font-size:clamp(1.15rem,1.7vw,1.35rem);color:rgba(255,255,255,0.9);font-weight:400;line-height:1.8;">
+      Todos los casos de prueba ejecutados exitosamente.<br>68 validaciones verificando flujos completos de automationexercise.com
+    </p>
+
+    <div class="closing-grid" style="margin:52px auto 0;">
+      <div class="closing-card" style="--cc-c:#f72585;">
+        <div class="cc-label">ESTUDIANTE</div>
+        <div class="cc-value" style="color:#f72585;">Catalina Valverde</div>
+      </div>
+      <div class="closing-card" style="--cc-c:#4361ee;">
+        <div class="cc-label">CURSO</div>
+        <div class="cc-value" style="color:#4361ee;">SC-405</div>
+      </div>
+      <div class="closing-card" style="--cc-c:#06d6a0;">
+        <div class="cc-label">UNIVERSIDAD</div>
+        <div class="cc-value" style="color:#06d6a0;">Fidelitas</div>
+      </div>
+      <div class="closing-card" style="--cc-c:#ffd166;">
+        <div class="cc-label">PROFESOR</div>
+        <div class="cc-value" style="color:#ffd166;">Daniel Grossberger</div>
+      </div>
+    </div>
+
+    <p style="margin-top:60px;font-size:1.1rem;color:rgba(255,255,255,0.5);font-family:'Space Grotesk',monospace;letter-spacing:0.18em;">
+      Gracias por su atencion
+    </p>
+  </div>
+</section>
+
+<!-- ======================= SCRIPTS ======================= -->
+<script>
+gsap.registerPlugin(ScrollTrigger, ScrollToPlugin);
+
+// ========== LOADER ==========
+const loaderTL = gsap.timeline();
+loaderTL
+  .to('#loaderText span',{y:0,opacity:1,duration:0.5,stagger:0.04,ease:'power3.out'},0.3)
+  .to('#loaderFill',{width:'100%',duration:1.6,ease:'power2.inOut'},0.5)
+  .to('#loader',{opacity:0,duration:0.5,ease:'power2.inOut',onComplete:()=>{document.getElementById('loader').style.display='none';initAll();}},2.5);
+
+// ========== CURSOR ==========
+const dot=document.getElementById('cursorDot'),ring=document.getElementById('cursorRing');
+let mx=0,my=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;});
+gsap.ticker.add(()=>{gsap.set(dot,{x:mx-4,y:my-4});gsap.to(ring,{x:mx-22,y:my-22,duration:0.15,ease:'power2.out'});});
+
+// ========== PARTICLES ==========
+const pC=document.getElementById('particleCanvas'),pX=pC.getContext('2d');
+let pts=[];
+function rsz(){pC.width=innerWidth;pC.height=innerHeight;}rsz();addEventListener('resize',rsz);
+const sColors=[['#ff006e','#8338ec','#3a86ff'],['#00f5d4','#00bbf9','#9b5de5'],['#f77f00','#fcbf49','#d62828'],['#7209b7','#b5179e','#4cc9f0'],['#ff006e','#fb5607','#ffbe0b'],['#06d6a0','#118ab2','#ffd166'],['#e63946','#457b9d','#a8dadc'],['#f72585','#7209b7','#4361ee']];
+let cCol=sColors[0];
+class P{constructor(){this.reset();}reset(){this.x=Math.random()*pC.width;this.y=Math.random()*pC.height;this.s=Math.random()*2.5+0.5;this.sx=(Math.random()-0.5)*0.4;this.sy=(Math.random()-0.5)*0.4;this.c=cCol[Math.floor(Math.random()*cCol.length)];this.a=Math.random()*0.35+0.08;}update(){this.x+=this.sx;this.y+=this.sy;if(this.x<0||this.x>pC.width||this.y<0||this.y>pC.height)this.reset();}draw(){pX.beginPath();pX.arc(this.x,this.y,this.s,0,Math.PI*2);pX.fillStyle=this.c;pX.globalAlpha=this.a;pX.fill();}}
+for(let i=0;i<100;i++)pts.push(new P());
+function aP(){pX.clearRect(0,0,pC.width,pC.height);pts.forEach(p=>{p.update();p.draw();});pX.globalAlpha=1;requestAnimationFrame(aP);}aP();
+
+// ========== NAV ==========
+let cS=0;const slides=document.querySelectorAll('.slide'),tS=slides.length;
+const dL=['Hero','About','Arch','Stats','TC01-03','TC04-06','Retos','Fin'];
+const dC=['#ff006e','#00f5d4','#f77f00','#7209b7','#ff006e','#06d6a0','#e63946','#f72585'];
+const dotsC=document.getElementById('navDots');
+slides.forEach((_,i)=>{const d=document.createElement('button');d.className='nav-dot'+(i===0?' active':'');d.setAttribute('data-label',dL[i]);d.onclick=()=>goTo(i);dotsC.appendChild(d);});
+
+function goTo(n){if(n<0||n>=tS)return;cS=n;gsap.to(window,{scrollTo:{y:slides[n]},duration:1,ease:'power3.inOut'});uN();}
+function uN(){document.querySelectorAll('.nav-dot').forEach((d,i)=>{d.classList.toggle('active',i===cS);d.style.setProperty('--dot-color',dC[i]);});document.getElementById('slideCounter').textContent=String(cS+1).padStart(2,'0')+' / '+String(tS).padStart(2,'0');document.getElementById('progressLine').style.width=((cS+1)/tS*100)+'%';cCol=sColors[cS];pts.forEach(p=>p.c=cCol[Math.floor(Math.random()*cCol.length)]);}
+document.addEventListener('keydown',e=>{if(e.key==='ArrowDown'||e.key==='ArrowRight'||e.key===' '){e.preventDefault();goTo(cS+1);}if(e.key==='ArrowUp'||e.key==='ArrowLeft'){e.preventDefault();goTo(cS-1);}if(e.key==='Home'){e.preventDefault();goTo(0);}if(e.key==='End'){e.preventDefault();goTo(tS-1);}});
+let sT;addEventListener('scroll',()=>{clearTimeout(sT);sT=setTimeout(()=>{const ns=Math.round(scrollY/innerHeight);if(ns!==cS&&ns>=0&&ns<tS){cS=ns;uN();}},100);});
+
+// ========== COUNTER ==========
+function aCt(el){if(el.dataset.counted)return;el.dataset.counted='true';const t=parseInt(el.dataset.target);gsap.to({v:0},{v:t,duration:2.5,ease:'power3.out',onUpdate:function(){el.textContent=Math.floor(this.targets()[0].v);}});}
+
+// ========== INIT ==========
+function initAll(){
+  // Hero
+  const hTL=gsap.timeline();
+  hTL.from('#heroLabel',{y:40,opacity:0,duration:1,ease:'power3.out'},0.2)
+     .from('.hero-title .line .word',{y:'120%',opacity:0,duration:1.3,stagger:0.18,ease:'power3.out'},0.4)
+     .from('.hero-line-accent',{scaleX:0,duration:0.8,ease:'power3.inOut'},1.3)
+     .from('#heroSub',{y:35,opacity:0,duration:0.9,ease:'power3.out'},1.5)
+     .from('#heroPills .pill-v2',{y:25,opacity:0,duration:0.5,stagger:0.08,ease:'power3.out'},1.7)
+     .from('#heroAuthor',{opacity:0,duration:1},2.1)
+     .to('#floatGif1',{opacity:0.8,rotation:-4,duration:1.2,ease:'power2.out'},1.6)
+     .to('#floatGif2',{opacity:0.7,rotation:3,duration:1.2,ease:'power2.out'},1.8)
+     .to('#floatGif3',{opacity:0.6,rotation:1,duration:1.2,ease:'power2.out'},2.0);
+
+  gsap.to('#floatGif1',{y:-25,duration:4,ease:'sine.inOut',yoyo:true,repeat:-1});
+  gsap.to('#floatGif2',{y:18,duration:5,ease:'sine.inOut',yoyo:true,repeat:-1,delay:1});
+  gsap.to('#floatGif3',{y:-15,duration:3.5,ease:'sine.inOut',yoyo:true,repeat:-1,delay:0.5});
+
+  document.getElementById('slide-0').addEventListener('mousemove',e=>{
+    const x=(e.clientX/innerWidth-0.5)*2,y=(e.clientY/innerHeight-0.5)*2;
+    gsap.to('#floatGif1',{x:x*35,y:y*25,duration:1,ease:'power2.out'});
+    gsap.to('#floatGif2',{x:x*-25,y:y*-18,duration:1,ease:'power2.out'});
+    gsap.to('#floatGif3',{x:x*18,y:y*28,duration:1,ease:'power2.out'});
+  });
+
+  // Helper: animate slide content when it enters view
+  function animateSlide(id, fn){
+    // Use IntersectionObserver as backup — more reliable than ScrollTrigger for full-page slides
+    const el = document.getElementById(id);
+    let fired = false;
+    const obs = new IntersectionObserver((entries)=>{
+      entries.forEach(entry=>{
+        if(entry.isIntersecting && !fired){
+          fired = true;
+          fn();
+          obs.disconnect();
+        }
+      });
+    },{threshold:0.15});
+    obs.observe(el);
+  }
+
+  // Slide 2
+  animateSlide('slide-1',()=>{
+    gsap.from('#slide-1 .section-label',{x:-70,opacity:0,duration:0.9,ease:'power3.out'});
+    gsap.from('#slide-1 .section-title',{x:-90,opacity:0,duration:1.1,ease:'power3.out',delay:0.15});
+    gsap.from('#slide-1 .section-sub',{x:-70,opacity:0,duration:0.9,ease:'power3.out',delay:0.3});
+    gsap.from('#slide-1 .pill-v2',{y:25,opacity:0,duration:0.5,stagger:0.08,ease:'power3.out',delay:0.5});
+    gsap.from('#slide-1 .gif-frame',{x:80,opacity:0,scale:0.9,duration:1.2,ease:'power3.out',delay:0.3});
+  });
+
+  // Slide 3
+  animateSlide('slide-2',()=>{
+    gsap.from('#slide-2 .gif-frame',{x:-80,opacity:0,scale:0.9,duration:1.2,ease:'power3.out'});
+    gsap.from('#slide-2 .section-label',{x:70,opacity:0,duration:0.9,ease:'power3.out',delay:0.3});
+    gsap.from('#slide-2 .section-title',{x:90,opacity:0,duration:1.1,ease:'power3.out',delay:0.45});
+    gsap.to('#slide-2 .tl2-item',{x:0,opacity:1,duration:0.8,stagger:0.2,ease:'power3.out',delay:0.6,onComplete:()=>document.querySelectorAll('#slide-2 .tl2-item').forEach(el=>el.classList.add('active'))});
+  });
+
+  // Slide 4 — Stats
+  animateSlide('slide-3',()=>{
+    gsap.from('#slide-3 .section-label',{y:35,opacity:0,duration:0.9,ease:'power3.out'});
+    gsap.from('#slide-3 .section-title',{y:45,opacity:0,duration:1.1,ease:'power3.out',delay:0.15});
+    gsap.from('#slide-3 .stat-block',{y:70,opacity:0,scale:0.85,duration:0.9,stagger:0.15,ease:'back.out(1.7)',delay:0.3});
+    gsap.from('#slide-3 .mini-metric',{y:35,opacity:0,duration:0.7,stagger:0.1,ease:'power3.out',delay:1.1});
+    document.querySelectorAll('#slide-3 .counter').forEach(el=>aCt(el));
+  });
+
+  // Slide 5 — TC01-03
+  animateSlide('slide-4',()=>{
+    gsap.from('#slide-4 .section-label',{y:35,opacity:0,duration:0.9,ease:'power3.out'});
+    gsap.from('#slide-4 .section-title',{y:45,opacity:0,duration:1.1,ease:'power3.out',delay:0.1});
+    gsap.from('#slide-4 .tc-card-v2',{y:90,opacity:0,rotateX:18,duration:1.1,stagger:0.22,ease:'back.out(1.4)',delay:0.3,onComplete:()=>{document.querySelectorAll('#slide-4 .tc-bar-fill').forEach(b=>{b.style.width=b.dataset.width;});}});
+  });
+
+  // Slide 6 — TC04-06
+  animateSlide('slide-5',()=>{
+    gsap.from('#slide-5 .section-label',{y:35,opacity:0,duration:0.9,ease:'power3.out'});
+    gsap.from('#slide-5 .section-title',{y:45,opacity:0,duration:1.1,ease:'power3.out',delay:0.1});
+    gsap.from('#slide-5 .tc-card-v2',{y:90,opacity:0,rotateX:18,duration:1.1,stagger:0.22,ease:'back.out(1.4)',delay:0.3,onComplete:()=>{document.querySelectorAll('#slide-5 .tc-bar-fill').forEach(b=>{b.style.width=b.dataset.width;});}});
+  });
+
+  // Slide 7 — Challenges
+  animateSlide('slide-6',()=>{
+    gsap.from('#slide-6 .section-label',{x:-70,opacity:0,duration:0.9,ease:'power3.out'});
+    gsap.from('#slide-6 .section-title',{x:-90,opacity:0,duration:1.1,ease:'power3.out',delay:0.15});
+    gsap.from('#slide-6 .challenge-v2',{x:-70,opacity:0,duration:0.8,stagger:0.2,ease:'power3.out',delay:0.35});
+    gsap.from('#slide-6 .gif-frame',{x:80,opacity:0,scale:0.9,duration:1.2,ease:'power3.out',delay:0.4});
+  });
+
+  // Slide 8 — GRAND FINALE
+  animateSlide('slide-7',()=>{
+    gsap.from('#slide-7 .section-label',{y:35,opacity:0,duration:0.9,ease:'power3.out'});
+    aCt(document.getElementById('finalCounter'));
+
+    // PASSED text — elastic bounce in
+    gsap.to('#passedText',{scale:1,opacity:1,duration:1.5,ease:'elastic.out(1,0.4)',delay:1.8,onComplete:()=>{
+      // MEGA EXPLOSION
+      fireExplosion();
+      // Shake the text
+      gsap.to('#passedText',{x:10,duration:0.05,yoyo:true,repeat:8,ease:'power1.inOut'});
+      // Glow pulse
+      gsap.to('#passedText span',{textShadow:'0 0 80px rgba(6,214,160,0.8),0 0 160px rgba(6,214,160,0.4)',duration:0.8,yoyo:true,repeat:2,ease:'power2.inOut'});
+    }});
+
+    gsap.from('#slide-7 .closing-card',{y:50,opacity:0,scale:0.88,duration:0.8,stagger:0.14,ease:'back.out(1.7)',delay:2.8});
+  });
+
+  // SAFETY NET: after 5 seconds, force everything visible in case any animation didn't fire
+  setTimeout(()=>{
+    document.querySelectorAll('.stat-block,.tc-card-v2,.challenge-v2,.gif-frame,.mini-metric,.closing-card,.section-label,.section-title,.section-sub,.pill-v2,.tl2-item').forEach(el=>{
+      el.style.opacity='1';
+      el.style.transform='none';
+    });
+    document.querySelectorAll('.tl2-item').forEach(el=>el.classList.add('active'));
+    document.querySelectorAll('.tc-bar-fill').forEach(b=>{if(b.dataset.width)b.style.width=b.dataset.width;});
+    document.querySelectorAll('.counter').forEach(el=>aCt(el));
+  },6000);
+}
+
+// ========== CONFETTI MEGA EXPLOSION ==========
+function fireExplosion(){
+  const c=['#f72585','#7209b7','#4361ee','#06d6a0','#ffd166','#ff006e','#00f5d4','#ffbe0b','#4cc9f0','#fb5607'];
+
+  // Wave 1: Center burst
+  confetti({particleCount:200,spread:120,origin:{y:0.45},colors:c,startVelocity:55,gravity:0.8,ticks:350,scalar:1.2});
+
+  // Wave 2: Left cannon
+  setTimeout(()=>confetti({particleCount:100,angle:60,spread:80,origin:{x:0,y:0.55},colors:c,startVelocity:50,gravity:0.7,ticks:300}),150);
+
+  // Wave 3: Right cannon
+  setTimeout(()=>confetti({particleCount:100,angle:120,spread:80,origin:{x:1,y:0.55},colors:c,startVelocity:50,gravity:0.7,ticks:300}),300);
+
+  // Wave 4: Star shower
+  setTimeout(()=>confetti({particleCount:60,spread:360,origin:{y:0.35},colors:c,shapes:['star'],startVelocity:35,gravity:0.5,scalar:1.8,ticks:250}),500);
+
+  // Wave 5: Top rain
+  setTimeout(()=>{
+    confetti({particleCount:150,spread:160,origin:{y:0.1,x:0.3},colors:c,startVelocity:45,gravity:1.2,ticks:300});
+    confetti({particleCount:150,spread:160,origin:{y:0.1,x:0.7},colors:c,startVelocity:45,gravity:1.2,ticks:300});
+  },700);
+
+  // Wave 6: Mega final
+  setTimeout(()=>confetti({particleCount:300,spread:180,origin:{y:0.25},colors:c,startVelocity:65,gravity:0.9,ticks:400,scalar:1.3}),1000);
+
+  // Wave 7: Circles
+  setTimeout(()=>confetti({particleCount:80,spread:360,origin:{y:0.5},colors:c,shapes:['circle'],startVelocity:25,gravity:0.4,scalar:2,ticks:200}),1300);
+
+  // Wave 8: Last sparkle
+  setTimeout(()=>{
+    for(let i=0;i<5;i++){
+      setTimeout(()=>confetti({particleCount:30,spread:60,origin:{x:Math.random(),y:Math.random()*0.5+0.1},colors:c,startVelocity:20,gravity:0.6,ticks:200}),i*120);
+    }
+  },1600);
+}
+
+// ========== MAGNETIC EFFECT ==========
+document.querySelectorAll('.pill-v2,.closing-card,.nav-dot').forEach(el=>{
+  el.addEventListener('mousemove',e=>{const r=el.getBoundingClientRect();gsap.to(el,{x:(e.clientX-r.left-r.width/2)*0.15,y:(e.clientY-r.top-r.height/2)*0.15,duration:0.3,ease:'power2.out'});});
+  el.addEventListener('mouseleave',()=>gsap.to(el,{x:0,y:0,duration:0.5,ease:'elastic.out(1,0.5)'}));
+});
+
+// ========== 3D TILT ==========
+document.querySelectorAll('.tc-card-v2,.glass,.gif-frame').forEach(card=>{
+  card.addEventListener('mousemove',e=>{const r=card.getBoundingClientRect();gsap.to(card,{rotateX:((e.clientY-r.top)/r.height-0.5)*10,rotateY:((e.clientX-r.left)/r.width-0.5)*-10,duration:0.4,ease:'power2.out',transformPerspective:800});});
+  card.addEventListener('mouseleave',()=>gsap.to(card,{rotateX:0,rotateY:0,duration:0.6,ease:'power2.out'}));
+});
+</script>
+</body>
+</html>
